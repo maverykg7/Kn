@@ -1,3 +1,4 @@
+-- BLOCO 1 - CONFIGURAÇÕES, CACHE E REMOTES
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -73,6 +74,8 @@ local bossList = {
 }
 local bossEnabled = {}
 for _, name in ipairs(bossList) do bossEnabled[name] = true end
+
+-- Lista de inimigos (Spike e Mummy incluídos)
 local enemyZones = {
     { name = "Summer", zone = "SummerEventZone", attackAll = true },
     { name = "Winter", zone = "WinterEventZone", attackAll = true },
@@ -86,6 +89,7 @@ local enemyZones = {
 }
 local enemyEnabled = {}
 for i = 1, #enemyZones do enemyEnabled[i] = false end
+
 local foodZones = {
     { name = "Crystal Food", zone = "Zone12.1", enabled = false },
     { name = "Draco Food", zone = "Zone12", enabled = false },
@@ -114,6 +118,8 @@ end
 local function safeCollectFood(food, pet)
     if CollectionRemote then pcall(CollectionRemote.InvokeServer, CollectionRemote, "CollectFood", food, pet) end
 end
+
+-- Função de ataque a inimigos com TODOS os pets (1 pet por inimigo)
 local function attackEnemiesInZone(zoneName, specificEnemy, attackAll)
     local zone = zoneCache[zoneName]
     if not zone then return end
@@ -129,11 +135,14 @@ local function attackEnemiesInZone(zoneName, specificEnemy, attackAll)
     if #enemies == 0 then return end
     local pets = updatePets()
     if #pets == 0 then return end
+    
+    -- Distribui 1 pet para cada inimigo (circular)
     for i, enemy in ipairs(enemies) do
         local pet = pets[((i-1) % #pets) + 1]
         safeAttackEnemy(enemy, pet)
     end
 end
+
 local function attackBosses()
     if #activeBosses == 0 then return end
     local pets = updatePets()
@@ -215,6 +224,8 @@ local function removeHatchAnimation()
     local ev = ReplicatedStorage and ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Events") and ReplicatedStorage.Remotes.Events:FindFirstChild("HatchAnimationEvent")
     if ev then ev:Destroy() end
 end
+
+-- BLOCO 2 - SISTEMA DE TAREFAS E LOOP PRINCIPAL
 local active = false
 local mainThread = nil
 local tasks = {}
@@ -282,6 +293,7 @@ local function stop()
     game:GetService("StarterGui"):SetCore("SendNotification", { Title = "GK Hub", Text = "Farm stopped.", Duration = 2 })
 end
 
+-- BLOCO 3 - INTERFACE COMPLETA
 local win = Rayfield:CreateWindow({
     Name = "GK Hub", LoadingTitle = "Pet Swarm Sim", LoadingSubtitle = "Complete",
     ConfigurationSaving = { Enabled = true, FolderName = "gkhub", FileName = "Config" }, Theme = "Dark"
