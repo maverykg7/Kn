@@ -1,4 +1,3 @@
--- BLOCO 1 - CONFIGURAÇÕES, CACHE E REMOTES
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -74,8 +73,6 @@ local bossList = {
 }
 local bossEnabled = {}
 for _, name in ipairs(bossList) do bossEnabled[name] = true end
-
--- Lista de inimigos (Spike e Mummy incluídos)
 local enemyZones = {
     { name = "Summer", zone = "SummerEventZone", attackAll = true },
     { name = "Winter", zone = "WinterEventZone", attackAll = true },
@@ -89,7 +86,6 @@ local enemyZones = {
 }
 local enemyEnabled = {}
 for i = 1, #enemyZones do enemyEnabled[i] = false end
-
 local foodZones = {
     { name = "Crystal Food", zone = "Zone12.1", enabled = false },
     { name = "Draco Food", zone = "Zone12", enabled = false },
@@ -98,7 +94,7 @@ local config = {
     farmBosses = false, farmEnemies = false, farmFood = false,
     autoPlant = false, autoHatch = false, autoNests = false,
     doubleJump = false, wallspeed = 16,
-    bossAttackDelay = 0.5, enemyDelay = 0.5, foodDelay = 0.5, eggDelay = 0.5,
+    bossAttackDelay = 0.5, enemyDelay = 0.5, foodDelay = 0.01, eggDelay = 0.1,
 }
 local activeBosses = {}
 local eggsSelected = {}
@@ -118,8 +114,6 @@ end
 local function safeCollectFood(food, pet)
     if CollectionRemote then pcall(CollectionRemote.InvokeServer, CollectionRemote, "CollectFood", food, pet) end
 end
-
--- Função de ataque a inimigos com TODOS os pets (1 pet por inimigo)
 local function attackEnemiesInZone(zoneName, specificEnemy, attackAll)
     local zone = zoneCache[zoneName]
     if not zone then return end
@@ -135,14 +129,11 @@ local function attackEnemiesInZone(zoneName, specificEnemy, attackAll)
     if #enemies == 0 then return end
     local pets = updatePets()
     if #pets == 0 then return end
-    
-    -- Distribui 1 pet para cada inimigo (circular)
     for i, enemy in ipairs(enemies) do
         local pet = pets[((i-1) % #pets) + 1]
         safeAttackEnemy(enemy, pet)
     end
 end
-
 local function attackBosses()
     if #activeBosses == 0 then return end
     local pets = updatePets()
@@ -155,6 +146,7 @@ local function attackBosses()
     end
 end
 local function collectFood()
+    if not config.farmFood then return end
     for _, fz in ipairs(foodZones) do
         if fz.enabled then
             local zone = zoneCache[fz.zone]
@@ -165,9 +157,10 @@ local function collectFood()
                     if #foods > 0 then
                         local pets = updatePets()
                         if #pets > 0 then
-                            for fi, food in ipairs(foods) do
-                                local pet = pets[((fi-1) % #pets) + 1]
-                                safeCollectFood(food, pet)
+                            for _, food in ipairs(foods) do
+                                for _, pet in ipairs(pets) do
+                                    safeCollectFood(food, pet)
+                                end
                             end
                         end
                     end
@@ -224,8 +217,6 @@ local function removeHatchAnimation()
     local ev = ReplicatedStorage and ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Events") and ReplicatedStorage.Remotes.Events:FindFirstChild("HatchAnimationEvent")
     if ev then ev:Destroy() end
 end
-
--- BLOCO 2 - SISTEMA DE TAREFAS E LOOP PRINCIPAL
 local active = false
 local mainThread = nil
 local tasks = {}
@@ -242,7 +233,7 @@ local function mainLoop()
                 task.nextTime = now + task.interval
             end
         end
-        task.wait(0.05)
+        task.wait(0.01)
     end
 end
 local function start()
@@ -277,9 +268,7 @@ local function start()
             end
         end
     end, config.enemyDelay)
-    addTask("foodCollect", function()
-        if config.farmFood then collectFood() end
-    end, config.foodDelay)
+    addTask("foodCollect", collectFood, config.foodDelay)
     addTask("plant", doPlanting, config.eggDelay)
     addTask("hatch", doHatching, config.eggDelay)
     addTask("nests", doNests, config.eggDelay)
@@ -292,8 +281,6 @@ local function stop()
     activeBosses = {}
     game:GetService("StarterGui"):SetCore("SendNotification", { Title = "GK Hub", Text = "Farm stopped.", Duration = 2 })
 end
-
--- BLOCO 3 - INTERFACE COMPLETA
 local win = Rayfield:CreateWindow({
     Name = "GK Hub", LoadingTitle = "Pet Swarm Sim", LoadingSubtitle = "Complete",
     ConfigurationSaving = { Enabled = true, FolderName = "gkhub", FileName = "Config" }, Theme = "Dark"
@@ -338,8 +325,8 @@ local speedTab = win:CreateTab("Speed")
 speedTab:CreateSection("Delays")
 speedTab:CreateSlider({ Name = "Boss Attack Delay", Range = {0.1, 1}, Increment = 0.1, CurrentValue = config.bossAttackDelay, Callback = function(v) config.bossAttackDelay = v end })
 speedTab:CreateSlider({ Name = "Enemy Cycle Delay", Range = {0.001, 1}, Increment = 0.001, CurrentValue = config.enemyDelay, Callback = function(v) config.enemyDelay = v end })
-speedTab:CreateSlider({ Name = "Food Cycle Delay", Range = {0.1, 3}, Increment = 0.1, CurrentValue = config.foodDelay, Callback = function(v) config.foodDelay = v end })
-speedTab:CreateSlider({ Name = "Egg Cycle Delay", Range = {0.1, 5}, Increment = 0.1, CurrentValue = config.eggDelay, Callback = function(v) config.eggDelay = v end })
+speedTab:CreateSlider({ Name = "Food Cycle Delay", Range = {0.01, 1}, Increment = 0.01, CurrentValue = config.foodDelay, Callback = function(v) config.foodDelay = v end })
+speedTab:CreateSlider({ Name = "Egg Cycle Delay", Range = {0.1, 2}, Increment = 0.1, CurrentValue = config.eggDelay, Callback = function(v) config.eggDelay = v end })
 local enemiesTab = win:CreateTab("Enemies")
 enemiesTab:CreateSection("Enemy Farming")
 enemiesTab:CreateToggle({ Name = "Enable Enemies", CurrentValue = config.farmEnemies, Callback = function(v) config.farmEnemies = v end })
@@ -438,3 +425,5 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 game:GetService("StarterGui"):SetCore("SendNotification", { Title = "GK Hub", Text = "Loaded!", Duration = 3 })
+
+
