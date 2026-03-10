@@ -74,15 +74,15 @@ local bossList = {
 local bossEnabled = {}
 for _, name in ipairs(bossList) do bossEnabled[name] = true end
 local enemyZones = {
-    { name = "Summer", zone = "SummerEventZone", attackAll = true },
-    { name = "Winter", zone = "WinterEventZone", attackAll = true },
-    { name = "Sphinx (Evil Eagle)", zone = "ElementEventZone1", enemy = "Evil Eagle" },
-    { name = "Cursed Mummy", zone = "Zone2", enemy = "Cursed Mummy" },
-    { name = "Dark Spike", zone = "Zone3", enemy = "Dark Spike" },
-    { name = "Crazy Unicorn", zone = "Zone5", enemy = "Crazy Unicorn" },
-    { name = "Terror Tree", zone = "Zone10", enemy = "Terror Tree" },
-    { name = "Draco's Guard", zone = "Zone12", enemy = "Draco's Guard" },
-    { name = "Possessed Slime", zone = "Zone12.1", enemy = "Possessed Slime" },
+    { name = "Summer", zone = "SummerEventZone" },
+    { name = "Winter", zone = "WinterEventZone" },
+    { name = "Sphinx", zone = "ElementEventZone1" },
+    { name = "Cursed Mummy", zone = "Zone2" },
+    { name = "Dark Spike", zone = "Zone3" },
+    { name = "Crazy Unicorn", zone = "Zone5" },
+    { name = "Terror Tree", zone = "Zone10" },
+    { name = "Draco's Guard", zone = "Zone12" },
+    { name = "Possessed Slime", zone = "Zone12.1" },
 }
 local enemyEnabled = {}
 for i = 1, #enemyZones do enemyEnabled[i] = false end
@@ -114,18 +114,12 @@ end
 local function safeCollectFood(food, pet)
     if CollectionRemote then pcall(CollectionRemote.InvokeServer, CollectionRemote, "CollectFood", food, pet) end
 end
-local function attackEnemiesInZone(zoneName, specificEnemy, attackAll)
+local function attackEnemiesInZone(zoneName)
     local zone = zoneCache[zoneName]
     if not zone then return end
     local enemiesObj = zone:FindFirstChild("Enemies")
     if not enemiesObj then return end
-    local enemies
-    if attackAll then
-        enemies = enemiesObj:GetChildren()
-    else
-        local enemy = enemiesObj:FindFirstChild(specificEnemy)
-        enemies = enemy and {enemy} or {}
-    end
+    local enemies = enemiesObj:GetChildren()
     if #enemies == 0 then return end
     local pets = updatePets()
     if #pets == 0 then return end
@@ -145,6 +139,8 @@ local function attackBosses()
         end
     end
 end
+
+-- CORREÇÃO: Food agora usa attackAll (todos os pets em todas as comidas)
 local function collectFood()
     if not config.farmFood then return end
     for _, fz in ipairs(foodZones) do
@@ -169,6 +165,7 @@ local function collectFood()
         end
     end
 end
+
 local function doPlanting()
     if not config.autoPlant or #eggsSelected == 0 or not PlantRemote then return end
     for _, zone in ipairs(eggsSelected) do
@@ -233,7 +230,7 @@ local function mainLoop()
                 task.nextTime = now + task.interval
             end
         end
-        task.wait(0.01)
+        task.wait(0.05)
     end
 end
 local function start()
@@ -257,13 +254,9 @@ local function start()
     end, 0)
     addTask("enemyAttack", function()
         if config.farmEnemies then
-            for idx, zoneInfo in ipairs(enemyZones) do
+            for idx, zoneName in ipairs(enemyZones) do
                 if enemyEnabled[idx] then
-                    if zoneInfo.attackAll then
-                        attackEnemiesInZone(zoneInfo.zone, nil, true)
-                    else
-                        attackEnemiesInZone(zoneInfo.zone, zoneInfo.enemy, false)
-                    end
+                    attackEnemiesInZone(zoneName.zone)
                 end
             end
         end
@@ -324,30 +317,24 @@ mainTab:CreateLabel("discord: knzd1")
 local speedTab = win:CreateTab("Speed")
 speedTab:CreateSection("Delays")
 speedTab:CreateSlider({ Name = "Boss Attack Delay", Range = {0.1, 1}, Increment = 0.1, CurrentValue = config.bossAttackDelay, Callback = function(v) config.bossAttackDelay = v end })
-speedTab:CreateSlider({ Name = "Enemy Cycle Delay", Range = {0.001, 1}, Increment = 0.001, CurrentValue = config.enemyDelay, Callback = function(v) config.enemyDelay = v end })
+speedTab:CreateSlider({ Name = "Enemy Cycle Delay", Range = {0.1, 1}, Increment = 0.1, CurrentValue = config.enemyDelay, Callback = function(v) config.enemyDelay = v end })
 speedTab:CreateSlider({ Name = "Food Cycle Delay", Range = {0.01, 1}, Increment = 0.01, CurrentValue = config.foodDelay, Callback = function(v) config.foodDelay = v end })
 speedTab:CreateSlider({ Name = "Egg Cycle Delay", Range = {0.1, 2}, Increment = 0.1, CurrentValue = config.eggDelay, Callback = function(v) config.eggDelay = v end })
 local enemiesTab = win:CreateTab("Enemies")
-enemiesTab:CreateSection("Enemy Farming")
+enemiesTab:CreateSection("Enemy Farming (TODOS OS INIMIGOS)")
 enemiesTab:CreateToggle({ Name = "Enable Enemies", CurrentValue = config.farmEnemies, Callback = function(v) config.farmEnemies = v end })
-enemiesTab:CreateSection("Event Enemies")
+enemiesTab:CreateSection("Zonas")
 enemiesTab:CreateToggle({ Name = "Summer", CurrentValue = enemyEnabled[1], Callback = function(v) enemyEnabled[1] = v end })
 enemiesTab:CreateToggle({ Name = "Winter", CurrentValue = enemyEnabled[2], Callback = function(v) enemyEnabled[2] = v end })
-enemiesTab:CreateToggle({ Name = "Sphinx (Evil Eagle)", CurrentValue = enemyEnabled[3], Callback = function(v) enemyEnabled[3] = v end })
-enemiesTab:CreateSection("Desert")
+enemiesTab:CreateToggle({ Name = "Sphinx", CurrentValue = enemyEnabled[3], Callback = function(v) enemyEnabled[3] = v end })
 enemiesTab:CreateToggle({ Name = "Cursed Mummy", CurrentValue = enemyEnabled[4], Callback = function(v) enemyEnabled[4] = v end })
-enemiesTab:CreateSection("Crystal Island")
 enemiesTab:CreateToggle({ Name = "Dark Spike", CurrentValue = enemyEnabled[5], Callback = function(v) enemyEnabled[5] = v end })
-enemiesTab:CreateSection("Sky")
 enemiesTab:CreateToggle({ Name = "Crazy Unicorn", CurrentValue = enemyEnabled[6], Callback = function(v) enemyEnabled[6] = v end })
-enemiesTab:CreateSection("Tiki")
 enemiesTab:CreateToggle({ Name = "Terror Tree", CurrentValue = enemyEnabled[7], Callback = function(v) enemyEnabled[7] = v end })
-enemiesTab:CreateSection("Draco")
 enemiesTab:CreateToggle({ Name = "Draco's Guard", CurrentValue = enemyEnabled[8], Callback = function(v) enemyEnabled[8] = v end })
-enemiesTab:CreateSection("Crystal Island")
 enemiesTab:CreateToggle({ Name = "Possessed Slime", CurrentValue = enemyEnabled[9], Callback = function(v) enemyEnabled[9] = v end })
 local foodTab = win:CreateTab("Food")
-foodTab:CreateSection("Food Zones")
+foodTab:CreateSection("Food Zones (TODOS OS PETS EM TODAS AS COMIDAS)")
 foodTab:CreateToggle({ Name = "Enable Food", CurrentValue = config.farmFood, Callback = function(v) config.farmFood = v end })
 foodTab:CreateToggle({ Name = "Crystal Food", CurrentValue = foodZones[1].enabled, Callback = function(v) foodZones[1].enabled = v end })
 foodTab:CreateToggle({ Name = "Draco Food", CurrentValue = foodZones[2].enabled, Callback = function(v) foodZones[2].enabled = v end })
@@ -425,5 +412,4 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 game:GetService("StarterGui"):SetCore("SendNotification", { Title = "GK Hub", Text = "Loaded!", Duration = 3 })
-
 
