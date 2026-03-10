@@ -73,19 +73,22 @@ local bossList = {
 }
 local bossEnabled = {}
 for _, name in ipairs(bossList) do bossEnabled[name] = true end
+
+-- CORREÇÃO: TODOS os inimigos com attackAll = true
 local enemyZones = {
-    { name = "Summer", zone = "SummerEventZone" },
-    { name = "Winter", zone = "WinterEventZone" },
-    { name = "Sphinx", zone = "ElementEventZone1" },
-    { name = "Cursed Mummy", zone = "Zone2" },
-    { name = "Dark Spike", zone = "Zone3" },
-    { name = "Crazy Unicorn", zone = "Zone5" },
-    { name = "Terror Tree", zone = "Zone10" },
-    { name = "Draco's Guard", zone = "Zone12" },
-    { name = "Possessed Slime", zone = "Zone12.1" },
+    { name = "Summer", zone = "SummerEventZone", attackAll = true },
+    { name = "Winter", zone = "WinterEventZone", attackAll = true },
+    { name = "Sphinx", zone = "ElementEventZone1", attackAll = true },
+    { name = "Cursed Mummy", zone = "Zone2", attackAll = true },
+    { name = "Dark Spike", zone = "Zone3", attackAll = true },
+    { name = "Crazy Unicorn", zone = "Zone5", attackAll = true },
+    { name = "Terror Tree", zone = "Zone10", attackAll = true },
+    { name = "Draco's Guard", zone = "Zone12", attackAll = true },
+    { name = "Possessed Slime", zone = "Zone12.1", attackAll = true },
 }
 local enemyEnabled = {}
 for i = 1, #enemyZones do enemyEnabled[i] = false end
+
 local foodZones = {
     { name = "Crystal Food", zone = "Zone12.1", enabled = false },
     { name = "Draco Food", zone = "Zone12", enabled = false },
@@ -114,6 +117,8 @@ end
 local function safeCollectFood(food, pet)
     if CollectionRemote then pcall(CollectionRemote.InvokeServer, CollectionRemote, "CollectFood", food, pet) end
 end
+
+-- Função de ataque simplificada (agora sempre attackAll)
 local function attackEnemiesInZone(zoneName)
     local zone = zoneCache[zoneName]
     if not zone then return end
@@ -128,6 +133,7 @@ local function attackEnemiesInZone(zoneName)
         safeAttackEnemy(enemy, pet)
     end
 end
+
 local function attackBosses()
     if #activeBosses == 0 then return end
     local pets = updatePets()
@@ -139,8 +145,6 @@ local function attackBosses()
         end
     end
 end
-
--- CORREÇÃO: Food agora usa attackAll (todos os pets em todas as comidas)
 local function collectFood()
     if not config.farmFood then return end
     for _, fz in ipairs(foodZones) do
@@ -165,7 +169,6 @@ local function collectFood()
         end
     end
 end
-
 local function doPlanting()
     if not config.autoPlant or #eggsSelected == 0 or not PlantRemote then return end
     for _, zone in ipairs(eggsSelected) do
@@ -214,6 +217,7 @@ local function removeHatchAnimation()
     local ev = ReplicatedStorage and ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Events") and ReplicatedStorage.Remotes.Events:FindFirstChild("HatchAnimationEvent")
     if ev then ev:Destroy() end
 end
+
 local active = false
 local mainThread = nil
 local tasks = {}
@@ -254,9 +258,9 @@ local function start()
     end, 0)
     addTask("enemyAttack", function()
         if config.farmEnemies then
-            for idx, zoneName in ipairs(enemyZones) do
+            for idx, zoneInfo in ipairs(enemyZones) do
                 if enemyEnabled[idx] then
-                    attackEnemiesInZone(zoneName.zone)
+                    attackEnemiesInZone(zoneInfo.zone)
                 end
             end
         end
@@ -334,7 +338,7 @@ enemiesTab:CreateToggle({ Name = "Terror Tree", CurrentValue = enemyEnabled[7], 
 enemiesTab:CreateToggle({ Name = "Draco's Guard", CurrentValue = enemyEnabled[8], Callback = function(v) enemyEnabled[8] = v end })
 enemiesTab:CreateToggle({ Name = "Possessed Slime", CurrentValue = enemyEnabled[9], Callback = function(v) enemyEnabled[9] = v end })
 local foodTab = win:CreateTab("Food")
-foodTab:CreateSection("Food Zones (TODOS OS PETS EM TODAS AS COMIDAS)")
+foodTab:CreateSection("Food Zones")
 foodTab:CreateToggle({ Name = "Enable Food", CurrentValue = config.farmFood, Callback = function(v) config.farmFood = v end })
 foodTab:CreateToggle({ Name = "Crystal Food", CurrentValue = foodZones[1].enabled, Callback = function(v) foodZones[1].enabled = v end })
 foodTab:CreateToggle({ Name = "Draco Food", CurrentValue = foodZones[2].enabled, Callback = function(v) foodZones[2].enabled = v end })
@@ -412,4 +416,3 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 game:GetService("StarterGui"):SetCore("SendNotification", { Title = "GK Hub", Text = "Loaded!", Duration = 3 })
-
