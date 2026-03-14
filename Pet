@@ -171,14 +171,10 @@ local function doPlanting()
         for _ = 1, 9 do pcall(PlantRemote.FireServer, PlantRemote, zone) end
     end
 end
-
--- ALTERADO: Hatch agora apenas 1 vez
 local function doHatching()
     if not config.autoHatch or not HatchRemote then return end
     pcall(HatchRemote.FireServer, HatchRemote)
 end
-
--- ALTERADO: Nests agora 2 vezes por ninho
 local function doNests()
     if not config.autoNests or not FeedRemote then return end
     local nests = updateNests()
@@ -190,7 +186,6 @@ local function doNests()
         end
     end
 end
-
 local function scanBosses()
     if not config.farmBosses then activeBosses = {}; return end
     local new = {}
@@ -220,6 +215,7 @@ local function removeHatchAnimation()
     local ev = ReplicatedStorage and ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Events") and ReplicatedStorage.Remotes.Events:FindFirstChild("HatchAnimationEvent")
     if ev then ev:Destroy() end
 end
+
 local active = false
 local mainThread = nil
 local tasks = {}
@@ -418,4 +414,7 @@ local guiVisible = true
 UserInputService.InputBegan:Connect(function(input, gp)
     if not gp and input.KeyCode == Enum.KeyCode.H then
         guiVisible = not guiVisible
-        for _, v in pairs(win:GetChildr
+        for _, v in pairs(win:GetChildren()) do if v:IsA("ScreenGui") then v.Enabled = guiVisible end end
+    end
+end)
+game:GetService("StarterGui"):SetCore("SendNotification", { Title = "GK Hub", Text = "Loaded!", Duration = 3 })
